@@ -15,4 +15,159 @@ _______________________________________________________________
 [i] Updating the Database ...
 [i] Update completed.
 
-[!] The Website is not fully configured and currently in install mode. Create a new admin user at http://localhost:8080/wp-admin/install.php
+[+] URL: http://localhost:8080/ [::1]
+[+] Started: Tue May 12 19:32:36 2026
+
+Interesting Finding(s):
+
+[+] Headers
+ | Interesting Entries:
+ |  - Server: Apache/2.4.57 (Debian)
+ |  - X-Powered-By: PHP/8.2.17
+ | Found By: Headers (Passive Detection)
+ | Confidence: 100%
+
+[+] XML-RPC seems to be enabled: http://localhost:8080/xmlrpc.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+ | References:
+ |  - http://codex.wordpress.org/XML-RPC_Pingback_API
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_ghost_scanner/
+ |  - https://www.rapid7.com/db/modules/auxiliary/dos/http/wordpress_xmlrpc_dos/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_xmlrpc_login/
+ |  - https://www.rapid7.com/db/modules/auxiliary/scanner/http/wordpress_pingback_access/
+
+[+] WordPress readme found: http://localhost:8080/readme.html
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 100%
+
+[+] The external WP-Cron seems to be enabled: http://localhost:8080/wp-cron.php
+ | Found By: Direct Access (Aggressive Detection)
+ | Confidence: 60%
+ | References:
+ |  - https://www.iplocation.net/defend-wordpress-from-ddos
+ |  - https://github.com/wpscanteam/wpscan/issues/1299
+
+[+] WordPress version 6.4.3 identified (Insecure, released on 2024-01-30).
+ | Found By: Rss Generator (Passive Detection)
+ |  - http://localhost:8080/?feed=rss2, <generator>https://wordpress.org/?v=6.4.3</generator>
+ |  - http://localhost:8080/?feed=comments-rss2, <generator>https://wordpress.org/?v=6.4.3</generator>
+ |
+ | [!] 6 vulnerabilities identified:
+ |
+ | [!] Title: WP < 6.5.2 - Unauthenticated Stored XSS
+ |     Fixed in: 6.4.4
+ |     References:
+ |      - https://wpscan.com/vulnerability/1a5c5df1-57ee-4190-a336-b0266962078f
+ |      - https://wordpress.org/news/2024/04/wordpress-6-5-2-maintenance-and-security-release/
+ |
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Stored XSS in HTML API
+ |     Fixed in: 6.4.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/2c63f136-4c1f-4093-9a8c-5e51f19eae28
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+ |
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Stored XSS in Template-Part Block
+ |     Fixed in: 6.4.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/7c448f6d-4531-4757-bff0-be9e3220bbbb
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+ |
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Path Traversal in Template-Part Block
+ |     Fixed in: 6.4.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/36232787-754a-4234-83d6-6ded5e80251c
+ |      - https://wordpress.org/news/2024/06/wordpress-6-5-5/
+ |
+ | [!] Title: WP < 6.8.3 - Author+ DOM Stored XSS
+ |     Fixed in: 6.4.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/c4616b57-770f-4c40-93f8-29571c80330a
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-58674
+ |      - https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-cross-site-scripting-xss-vulnerability
+ |      -  https://wordpress.org/news/2025/09/wordpress-6-8-3-release/
+ |
+ | [!] Title: WP < 6.8.3 - Contributor+ Sensitive Data Disclosure
+ |     Fixed in: 6.4.7
+ |     References:
+ |      - https://wpscan.com/vulnerability/1e2dad30-dd95-4142-903b-4d5c580eaad2
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-58246
+ |      - https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-sensitive-data-exposure-vulnerability
+ |      - https://wordpress.org/news/2025/09/wordpress-6-8-3-release/
+
+[+] WordPress theme in use: twentytwentyfour
+ | Location: http://localhost:8080/wp-content/themes/twentytwentyfour/
+ | Last Updated: 2025-12-03T00:00:00.000Z
+ | Readme: http://localhost:8080/wp-content/themes/twentytwentyfour/readme.txt
+ | [!] The version is out of date, the latest version is 1.4
+ | Style URL: http://localhost:8080/wp-content/themes/twentytwentyfour/style.css
+ | Style Name: Twenty Twenty-Four
+ | Style URI: https://wordpress.org/themes/twentytwentyfour/
+ | Description: Twenty Twenty-Four is designed to be flexible, versatile and applicable to any website. Its collecti...
+ | Author: the WordPress team
+ | Author URI: https://wordpress.org
+ |
+ | Found By: Urls In Homepage (Passive Detection)
+ | Confirmed By: Urls In 404 Page (Passive Detection)
+ |
+ | Version: 1.0 (80% confidence)
+ | Found By: Style (Passive Detection)
+ |  - http://localhost:8080/wp-content/themes/twentytwentyfour/style.css, Match: 'Version: 1.0'
+
+
+[i] Plugin(s) Identified:
+
+[+] akismet
+ | Location: http://localhost:8080/wp-content/plugins/akismet/
+ | Latest Version: 5.7
+ | Last Updated: 2026-04-23T22:34:00.000Z
+ |
+ | Found By: Known Locations (Aggressive Detection)
+ |  - http://localhost:8080/wp-content/plugins/akismet/, status: 403
+ |
+ | [!] 1 vulnerability identified:
+ |
+ | [!] Title: Akismet 2.5.0-3.1.4 - Unauthenticated Stored Cross-Site Scripting (XSS)
+ |     Fixed in: 3.1.5
+ |     References:
+ |      - https://wpscan.com/vulnerability/1a2f3094-5970-4251-9ed0-ec595a0cd26c
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-9357
+ |      - http://blog.akismet.com/2015/10/13/akismet-3-1-5-wordpress/
+ |      - https://blog.sucuri.net/2015/10/security-advisory-stored-xss-in-akismet-wordpress-plugin.html
+ |
+ | The version could not be determined.
+
+
+[i] No themes Found.
+
+
+[i] No Timthumbs Found.
+
+
+[i] No Config Backups Found.
+
+
+[i] No DB Exports Found.
+
+
+[i] User(s) Identified:
+
+[+] admin
+ | Found By: Author Posts - Display Name (Passive Detection)
+ | Confirmed By:
+ |  Rss Generator (Passive Detection)
+ |  Author Id Brute Forcing - Author Pattern (Aggressive Detection)
+ |  Login Error Messages (Aggressive Detection)
+
+[+] WPScan DB API OK
+ | Plan: free
+ | Requests Done (during the scan): 3
+ | Requests Remaining: 22
+
+[+] Finished: Tue May 12 19:41:36 2026
+[+] Requests Done: 18853
+[+] Cached Requests: 13
+[+] Data Sent: 5.095 MB
+[+] Data Received: 668.525 MB
+[+] Memory used: 451.926 MB
+[+] Elapsed time: 00:09:00

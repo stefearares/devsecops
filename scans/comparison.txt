@@ -1,3 +1,40 @@
 === HARDENED SCAN SUMMARY ===
 
-[!] The Website is not fully configured and currently in install mode. Create a new admin user at http://localhost:8080/wp-admin/install.php
+[+] URL: http://localhost:8080/ [::1]
+[+] Started: Tue May 12 19:45:07 2026
+[+] Headers
+[+] The external WP-Cron seems to be enabled: http://localhost:8080/wp-cron.php
+[+] WordPress version 6.4.3 identified (Insecure, released on 2024-01-30).
+ | [!] 6 vulnerabilities identified:
+ | [!] Title: WP < 6.5.2 - Unauthenticated Stored XSS
+ |      - https://wpscan.com/vulnerability/1a5c5df1-57ee-4190-a336-b0266962078f
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Stored XSS in HTML API
+ |      - https://wpscan.com/vulnerability/2c63f136-4c1f-4093-9a8c-5e51f19eae28
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Stored XSS in Template-Part Block
+ |      - https://wpscan.com/vulnerability/7c448f6d-4531-4757-bff0-be9e3220bbbb
+ | [!] Title: WordPress < 6.5.5 - Contributor+ Path Traversal in Template-Part Block
+ |      - https://wpscan.com/vulnerability/36232787-754a-4234-83d6-6ded5e80251c
+ | [!] Title: WP < 6.8.3 - Author+ DOM Stored XSS
+ |      - https://wpscan.com/vulnerability/c4616b57-770f-4c40-93f8-29571c80330a
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-58674
+ |      - https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-cross-site-scripting-xss-vulnerability
+ | [!] Title: WP < 6.8.3 - Contributor+ Sensitive Data Disclosure
+ |      - https://wpscan.com/vulnerability/1e2dad30-dd95-4142-903b-4d5c580eaad2
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2025-58246
+ |      - https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-sensitive-data-exposure-vulnerability
+[+] WordPress theme in use: twentytwentyfour
+ | [!] The version is out of date, the latest version is 1.4
+[+] akismet
+ | [!] 1 vulnerability identified:
+ | [!] Title: Akismet 2.5.0-3.1.4 - Unauthenticated Stored Cross-Site Scripting (XSS)
+ |      - https://wpscan.com/vulnerability/1a2f3094-5970-4251-9ed0-ec595a0cd26c
+ |      - https://cve.mitre.org/cgi-bin/cvename.cgi?name=CVE-2015-9357
+[+] admin
+[+] WPScan DB API OK
+[+] Finished: Tue May 12 19:53:32 2026
+[+] Requests Done: 18854
+[+] Cached Requests: 13
+[+] Data Sent: 5.095 MB
+[+] Data Received: 673.134 MB
+[+] Memory used: 450.434 MB
+[+] Elapsed time: 00:08:25
