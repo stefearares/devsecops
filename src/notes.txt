@@ -1,0 +1,34 @@
+DevSecOps Lab – Working Notes
+==============================
+
+## WPScan API Token
+Register for a free token at https://wpscan.com/register
+Add it as a GitHub repository secret named: WPSCAN_API_TOKEN
+Without it, WPScan still runs but vulnerability data is limited.
+
+## Required GitHub Secrets
+Set these under Settings → Secrets and variables → Actions:
+  WPSCAN_API_TOKEN    – from wpscan.com (optional but recommended)
+  DOCKERHUB_USERNAME  – your Docker Hub username
+  DOCKERHUB_TOKEN     – Docker Hub access token (not your password)
+
+## Known Misconfigurations in Vanilla Image (intentional for lab)
+1. XML-RPC enabled  → brute-force / DDoS amplification
+2. wp-login.php exposed with no rate limiting → credential stuffing
+3. Server version disclosed (Apache + PHP headers)
+4. Directory listing enabled on some paths
+5. wp-config.php writable by www-data
+6. Debug mode potentially leaking stack traces
+7. imagemagick installed (large attack surface, not needed for basic WP)
+
+## Remediation Applied in Dockerfile.hardened
+- apt-get upgrade: OS-level CVE patches
+- DISALLOW_FILE_EDIT / DISALLOW_FILE_MODS: prevents admin-panel code execution
+- Apache ServerTokens Prod: hides version
+- PHP expose_php = Off: hides PHP version
+- Disabled dangerous PHP functions: exec, system, shell_exec, etc.
+- xmlrpc.php blocked in Apache config
+- X-Frame-Options, X-XSS-Protection, X-Content-Type-Options headers
+- setuid/setgid bits stripped from binaries
+- Container runs as www-data (non-root)
+- Removed imagemagick, perl (reduced attack surface)

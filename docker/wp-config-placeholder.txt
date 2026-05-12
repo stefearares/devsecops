@@ -1,0 +1,18 @@
+WordPress configuration notes
+==============================
+
+This file documents non-secret wp-config.php hardening options applied
+inside the hardened Dockerfile (docker/Dockerfile.hardened).
+
+Security constants added:
+  define('DISALLOW_FILE_EDIT', true);       // Disable theme/plugin editor in WP admin
+  define('DISALLOW_FILE_MODS', true);       // Block plugin/theme installs from WP admin
+  define('FORCE_SSL_ADMIN', false);         // Set true behind TLS termination
+  define('WP_DEBUG', false);               // Never expose debug info in production
+  define('WP_DEBUG_DISPLAY', false);
+  define('AUTOMATIC_UPDATER_DISABLED', false); // Allow automatic core security updates
+
+File permissions (applied at image build):
+  wp-config.php  → 440 (owner read-only, group read, no world)
+  wp-content/    → 755
+  wp-admin/      → 755
