@@ -93,7 +93,6 @@ jobs:
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
-            --no-update \
             $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
             --output scans/wpscan-vanilla.txt \
             --format cli-no-colour \
@@ -239,7 +238,6 @@ jobs:
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
-            --no-update \
             $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
             --output scans/wpscan-hardened.txt \
             --format cli-no-colour \

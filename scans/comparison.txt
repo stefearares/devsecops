@@ -1,0 +1,3 @@
+=== HARDENED SCAN SUMMARY ===
+
+No critical findings
