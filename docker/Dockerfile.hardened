@@ -14,7 +14,6 @@ RUN apt-get update && \
     apt-get remove -y --purge \
         imagemagick \
         perl && \
-    apt-get autoremove -y && \
     rm -rf /var/lib/apt/lists/*
 
 # ── Install WP-CLI to manage core / plugin / theme updates ───────────────────
@@ -26,8 +25,11 @@ COPY hardening/php-hardening.ini /usr/local/etc/php/conf.d/99-hardening.ini
 
 # ── Apache hardening ─────────────────────────────────────────────────────────
 COPY hardening/apache-security.conf /etc/apache2/conf-enabled/security.conf
-RUN /usr/sbin/a2dismod status 2>/dev/null || true && \
-    /usr/sbin/a2enmod headers rewrite
+# mod_rewrite and mod_headers are already enabled in the WordPress base image.
+# Disable mod_status by removing its load file directly (avoids a2dismod dependency).
+RUN rm -f /etc/apache2/mods-enabled/status.conf \
+          /etc/apache2/mods-enabled/status.load && \
+    a2enmod headers rewrite
 
 # ── WordPress wp-config security constants ───────────────────────────────────
 COPY hardening/wp-config-extra.php /tmp/wp-config-extra.php
