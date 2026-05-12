@@ -26,8 +26,8 @@ COPY hardening/php-hardening.ini /usr/local/etc/php/conf.d/99-hardening.ini
 
 # ── Apache hardening ─────────────────────────────────────────────────────────
 COPY hardening/apache-security.conf /etc/apache2/conf-enabled/security.conf
-RUN a2dismod status && \
-    a2enmod headers rewrite
+RUN /usr/sbin/a2dismod status 2>/dev/null || true && \
+    /usr/sbin/a2enmod headers rewrite
 
 # ── WordPress wp-config security constants ───────────────────────────────────
 COPY hardening/wp-config-extra.php /tmp/wp-config-extra.php
@@ -46,7 +46,7 @@ RUN chown -R www-data:www-data /var/www/html && \
 COPY hardening/docker-entrypoint-hardened.sh /usr/local/bin/docker-entrypoint-hardened.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint-hardened.sh
 
-USER www-data
-
+# Note: keep root for entrypoint (upstream docker-entrypoint.sh requires it to
+# set up wp-config on first boot). Apache itself drops to www-data at runtime.
 ENTRYPOINT ["docker-entrypoint-hardened.sh"]
 CMD ["apache2-foreground"]
