@@ -1,0 +1,268 @@
+name: WordPress WPScan – Vulnerability Discovery & Remediation Pipeline
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      scan_target:
+        description: "Which image to scan: 'vanilla' or 'hardened'"
+        required: true
+        default: "vanilla"
+        type: choice
+        options:
+          - vanilla
+          - hardened
+
+env:
+  REGISTRY_GHCR: ghcr.io
+  REGISTRY_DOCKERHUB: docker.io
+  IMAGE_NAME: ${{ github.repository_owner }}/wordpress-hardened
+
+jobs:
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 1 – Scan the vanilla (un-patched) WordPress image
+  # ────────────────────────────────────────────────────────────────────────────
+  wpscan-vanilla:
+    name: "Scan – Vanilla WordPress"
+    runs-on: ubuntu-latest
+    if: github.event_name == 'push' || github.event.inputs.scan_target == 'vanilla'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Start MySQL container
+        run: |
+          docker run -d --name wp-db \
+            -e MYSQL_ROOT_PASSWORD=rootpassword \
+            -e MYSQL_DATABASE=wordpress \
+            -e MYSQL_USER=wpuser \
+            -e MYSQL_PASSWORD=wppass \
+            --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" \
+            --health-interval=5s \
+            --health-timeout=3s \
+            --health-retries=10 \
+            mysql:8.0
+
+      - name: Wait for MySQL to be healthy
+        run: |
+          echo "Waiting for MySQL..."
+          until [ "$(docker inspect -f '{{.State.Health.Status}}' wp-db)" = "healthy" ]; do
+            sleep 2
+          done
+          echo "MySQL is ready."
+
+      - name: Start WordPress (vanilla) container
+        run: |
+          docker run -d --name wp-site \
+            --link wp-db:mysql \
+            -e WORDPRESS_DB_HOST=mysql:3306 \
+            -e WORDPRESS_DB_USER=wpuser \
+            -e WORDPRESS_DB_PASSWORD=wppass \
+            -e WORDPRESS_DB_NAME=wordpress \
+            -p 8080:80 \
+            wordpress:6.4-php8.2-apache
+
+      - name: Wait for WordPress to be ready
+        run: |
+          echo "Waiting for WordPress to start..."
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
+              echo "WordPress responded with HTTP $STATUS – ready!"
+              break
+            fi
+            echo "Attempt $i – HTTP $STATUS, retrying in 5s..."
+            sleep 5
+          done
+
+      - name: Install WPScan
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev
+          sudo gem install wpscan --no-document
+
+      - name: Run WPScan (vanilla)
+        env:
+          WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
+        run: |
+          mkdir -p scans
+          wpscan \
+            --url http://localhost:8080 \
+            --enumerate u,vp,vt,tt,cb,dbe \
+            --plugins-detection aggressive \
+            --force \
+            --no-update \
+            $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
+            --output scans/wpscan-vanilla.txt \
+            --format cli-no-colour \
+            || true   # don't fail the job on findings
+
+      - name: Upload vanilla scan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wpscan-vanilla
+          path: scans/wpscan-vanilla.txt
+          retention-days: 30
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 2 – Build & push the hardened image
+  # ────────────────────────────────────────────────────────────────────────────
+  build-hardened:
+    name: "Build – Hardened Image"
+    runs-on: ubuntu-latest
+    needs: wpscan-vanilla
+    if: always() && (github.event_name == 'push' || github.event.inputs.scan_target == 'hardened')
+    outputs:
+      image_digest: ${{ steps.build.outputs.digest }}
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Log in to Docker Hub
+        uses: docker/login-action@v3
+        with:
+          username: ${{ secrets.DOCKERHUB_USERNAME }}
+          password: ${{ secrets.DOCKERHUB_TOKEN }}
+
+      - name: Extract metadata (tags & labels)
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: |
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}
+            ${{ secrets.DOCKERHUB_USERNAME }}/wordpress-hardened
+          tags: |
+            type=sha,prefix=sha-
+            type=raw,value=hardened
+            type=raw,value=latest
+
+      - name: Build and push hardened image
+        id: build
+        uses: docker/build-push-action@v5
+        with:
+          context: ./docker
+          file: ./docker/Dockerfile.hardened
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
+          labels: ${{ steps.meta.outputs.labels }}
+          cache-from: type=gha
+          cache-to: type=gha,mode=max
+
+  # ────────────────────────────────────────────────────────────────────────────
+  # JOB 3 – Re-scan the hardened image (verify fixes)
+  # ────────────────────────────────────────────────────────────────────────────
+  wpscan-hardened:
+    name: "Scan – Hardened WordPress"
+    runs-on: ubuntu-latest
+    needs: build-hardened
+    if: always() && needs.build-hardened.result == 'success'
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY_GHCR }}
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Start MySQL container
+        run: |
+          docker run -d --name wp-db \
+            -e MYSQL_ROOT_PASSWORD=rootpassword \
+            -e MYSQL_DATABASE=wordpress \
+            -e MYSQL_USER=wpuser \
+            -e MYSQL_PASSWORD=wppass \
+            --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" \
+            --health-interval=5s \
+            --health-timeout=3s \
+            --health-retries=10 \
+            mysql:8.0
+
+      - name: Wait for MySQL to be healthy
+        run: |
+          until [ "$(docker inspect -f '{{.State.Health.Status}}' wp-db)" = "healthy" ]; do
+            sleep 2
+          done
+
+      - name: Start WordPress (hardened) container
+        run: |
+          docker run -d --name wp-site \
+            --link wp-db:mysql \
+            -e WORDPRESS_DB_HOST=mysql:3306 \
+            -e WORDPRESS_DB_USER=wpuser \
+            -e WORDPRESS_DB_PASSWORD=wppass \
+            -e WORDPRESS_DB_NAME=wordpress \
+            -p 8080:80 \
+            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:hardened
+
+      - name: Wait for WordPress to be ready
+        run: |
+          for i in $(seq 1 30); do
+            STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
+            if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
+              echo "WordPress responded with HTTP $STATUS – ready!"
+              break
+            fi
+            echo "Attempt $i – HTTP $STATUS, retrying in 5s..."
+            sleep 5
+          done
+
+      - name: Install WPScan
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev
+          sudo gem install wpscan --no-document
+
+      - name: Run WPScan (hardened)
+        env:
+          WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
+        run: |
+          mkdir -p scans
+          wpscan \
+            --url http://localhost:8080 \
+            --enumerate u,vp,vt,tt,cb,dbe \
+            --plugins-detection aggressive \
+            --force \
+            --no-update \
+            $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
+            --output scans/wpscan-hardened.txt \
+            --format cli-no-colour \
+            || true
+
+      - name: Upload hardened scan artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: wpscan-hardened
+          path: scans/wpscan-hardened.txt
+          retention-days: 30
+
+      - name: Compare scan results (summary)
+        run: |
+          echo "=== HARDENED SCAN SUMMARY ===" | tee scans/comparison.txt
+          echo "" >> scans/comparison.txt
+          grep -E "(Vulnerability|vulnerability|CVE|MEDIUM|HIGH|CRITICAL|\[!\]|\[\+\])" \
+            scans/wpscan-hardened.txt >> scans/comparison.txt || echo "No critical findings" >> scans/comparison.txt
+          cat scans/comparison.txt
+
+      - name: Upload comparison artifact
+        uses: actions/upload-artifact@v4
+        with:
+          name: scan-comparison
+          path: scans/comparison.txt
+          retention-days: 30
