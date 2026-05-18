@@ -1,4 +1,4 @@
-name: WordPress WPScan – Vulnerability Discovery & Remediation Pipeline
+name: WordPress WPScan
 
 on:
   push:
@@ -6,7 +6,7 @@ on:
   workflow_dispatch:
     inputs:
       scan_target:
-        description: "Which image to scan: 'vanilla' or 'hardened'"
+        description: "'vanilla' or 'hardened'"
         required: true
         default: "vanilla"
         type: choice
@@ -20,11 +20,9 @@ env:
   IMAGE_NAME: ${{ github.repository_owner }}/wordpress-hardened
 
 jobs:
-  # ────────────────────────────────────────────────────────────────────────────
   # JOB 1 – Scan the vanilla (un-patched) WordPress image
-  # ────────────────────────────────────────────────────────────────────────────
   wpscan-vanilla:
-    name: "Scan – Vanilla WordPress"
+    name: "Scan Vanilla WordPress"
     runs-on: ubuntu-latest
     if: github.event_name == 'push' || github.event.inputs.scan_target == 'vanilla'
 
@@ -120,9 +118,8 @@ jobs:
           path: scans/wpscan-vanilla.txt
           retention-days: 30
 
-  # ────────────────────────────────────────────────────────────────────────────
   # JOB 2 – Build & push the hardened image
-  # ────────────────────────────────────────────────────────────────────────────
+  
   build-hardened:
     name: "Build – Hardened Image"
     runs-on: ubuntu-latest
@@ -175,9 +172,9 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-  # ────────────────────────────────────────────────────────────────────────────
+
   # JOB 3 – Re-scan the hardened image (verify fixes)
-  # ────────────────────────────────────────────────────────────────────────────
+  
   wpscan-hardened:
     name: "Scan – Hardened WordPress"
     runs-on: ubuntu-latest

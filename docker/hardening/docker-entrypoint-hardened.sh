@@ -1,10 +1,5 @@
 #!/bin/bash
 set -euo pipefail
-
-# Wait for upstream entrypoint to populate /var/www/html, then inject security constants.
-# We exec the original entrypoint first in a subshell only if wp-config.php already exists;
-# otherwise we let the original entrypoint handle first-boot setup.
-
 WP_CONFIG="/var/www/html/wp-config.php"
 EXTRA="/tmp/wp-config-extra.php"
 
@@ -23,5 +18,4 @@ inject_security_constants() {
 
 inject_security_constants
 
-# Hand off to the official WordPress entrypoint
 exec docker-entrypoint.sh "$@"

@@ -1,12 +1,7 @@
-DevSecOps Lab – Working Notes
-==============================
-
-## WPScan API Token
 Register for a free token at https://wpscan.com/register
 Add it as a GitHub repository secret named: WPSCAN_API_TOKEN
 Without it, WPScan still runs but vulnerability data is limited.
 
-## Required GitHub Secrets
 Set these under Settings → Secrets and variables → Actions:
   WPSCAN_API_TOKEN    – from wpscan.com (optional but recommended)
   DOCKERHUB_USERNAME  – your Docker Hub username

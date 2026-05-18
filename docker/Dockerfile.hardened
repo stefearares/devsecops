@@ -1,10 +1,8 @@
-# ─── Stage 1: build / patch ───────────────────────────────────────────────────
 FROM wordpress:6.4-php8.2-apache AS base
 
-LABEL maintainer="devsecops-lab"
-LABEL description="Hardened WordPress image – remediation stage"
+LABEL maintainer="rares"
+LABEL description="Hardened WordPress"
 
-# ── System updates & remove unnecessary packages ──────────────────────────────
 RUN apt-get update && \
     apt-get upgrade -y && \
     apt-get install -y --no-install-recommends \
@@ -15,36 +13,23 @@ RUN apt-get update && \
         imagemagick && \
     rm -rf /var/lib/apt/lists/*
 
-# ── Install WP-CLI to manage core / plugin / theme updates ───────────────────
 RUN curl -sS -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/builds/gh-pages/phar/wp-cli.phar && \
     chmod +x /usr/local/bin/wp
 
-# ── PHP hardening via custom php.ini ─────────────────────────────────────────
 COPY hardening/php-hardening.ini /usr/local/etc/php/conf.d/99-hardening.ini
 
-# ── Apache hardening ─────────────────────────────────────────────────────────
 COPY hardening/apache-security.conf /etc/apache2/conf-enabled/security.conf
 RUN a2dismod status 2>/dev/null || true && \
     a2enmod headers rewrite
-
-# ── WordPress wp-config security constants ───────────────────────────────────
 COPY hardening/wp-config-extra.php /tmp/wp-config-extra.php
-
-# ── Drop privileges: run Apache as non-root user ─────────────────────────────
-# The official WP image already uses www-data (uid 33).
-# We explicitly lock down ownership and strip setuid/setgid bits.
 RUN find / -xdev -perm /6000 -type f 2>/dev/null | xargs chmod a-s 2>/dev/null || true
 
-# ── Fix file permissions ──────────────────────────────────────────────────────
 RUN chown -R www-data:www-data /var/www/html && \
     find /var/www/html -type d -exec chmod 755 {} \; && \
     find /var/www/html -type f -exec chmod 644 {} \;
 
-# ── Entrypoint: inject security constants then hand off to upstream ───────────
 COPY hardening/docker-entrypoint-hardened.sh /usr/local/bin/docker-entrypoint-hardened.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint-hardened.sh
 
-# Note: keep root for entrypoint (upstream docker-entrypoint.sh requires it to
-# set up wp-config on first boot). Apache itself drops to www-data at runtime.
 ENTRYPOINT ["docker-entrypoint-hardened.sh"]
 CMD ["apache2-foreground"]

@@ -21,7 +21,6 @@ services:
       retries: 5
 
   wordpress:
-    # Use pinned version for reproducibility; swap for hardened image after remediation
     image: wordpress:6.4-php8.2-apache
     container_name: wp-site
     restart: unless-stopped
