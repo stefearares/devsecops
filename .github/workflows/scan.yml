@@ -68,10 +68,8 @@ jobs:
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
-              echo "WordPress responded with HTTP $STATUS – ready!"
               break
             fi
-            echo "Attempt $i – HTTP $STATUS, retrying in 5s..."
             sleep 5
           done
 
@@ -121,7 +119,7 @@ jobs:
   # JOB 2 – Build & push the hardened image
   
   build-hardened:
-    name: "Build – Hardened Image"
+    name: "Build Hardened Image"
     runs-on: ubuntu-latest
     needs: wpscan-vanilla
     if: always() && (github.event_name == 'push' || github.event.inputs.scan_target == 'hardened')
@@ -176,7 +174,7 @@ jobs:
   # JOB 3 – Re-scan the hardened image (verify fixes)
   
   wpscan-hardened:
-    name: "Scan  Hardened WordPress"
+    name: "Scan Hardened WordPress"
     runs-on: ubuntu-latest
     needs: build-hardened
     if: always() && needs.build-hardened.result == 'success'
@@ -227,10 +225,9 @@ jobs:
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
-              echo "WordPress responded with HTTP $STATUS – ready!"
+              echo "WordPress responded with $STATUS!"
               break
             fi
-            echo "Attempt $i – HTTP $STATUS, retrying in 5s..."
             sleep 5
           done
 
@@ -275,9 +272,9 @@ jobs:
           path: scans/wpscan-hardened.txt
           retention-days: 30
 
-      - name: Compare scan results (summary)
+      - name: Compare scan results
         run: |
-          echo "=== HARDENED SCAN SUMMARY ===" | tee scans/comparison.txt
+          echo "HARDENED SCAN SUMMARY" | tee scans/comparison.txt
           echo "" >> scans/comparison.txt
           grep -E "(Vulnerability|vulnerability|CVE|MEDIUM|HIGH|CRITICAL|\[!\]|\[\+\])" \
             scans/wpscan-hardened.txt >> scans/comparison.txt || echo "No critical findings" >> scans/comparison.txt
