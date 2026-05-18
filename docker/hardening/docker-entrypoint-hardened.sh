@@ -5,7 +5,6 @@ EXTRA="/tmp/wp-config-extra.php"
 
 inject_security_constants() {
     if [ -f "$WP_CONFIG" ] && [ -f "$EXTRA" ]; then
-        # Only inject once (idempotent)
         if ! grep -q "DISALLOW_FILE_EDIT" "$WP_CONFIG"; then
             echo "" >> "$WP_CONFIG"
             cat "$EXTRA" >> "$WP_CONFIG"
