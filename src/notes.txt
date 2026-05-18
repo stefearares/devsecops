@@ -1,15 +1,14 @@
-Register for a free token at https://wpscan.com/register
 Add it as a GitHub repository secret named: WPSCAN_API_TOKEN
 Without it, WPScan still runs but vulnerability data is limited.
 
-Set these under Settings → Secrets and variables → Actions:
-  WPSCAN_API_TOKEN    – from wpscan.com (optional but recommended)
-  DOCKERHUB_USERNAME  – your Docker Hub username
-  DOCKERHUB_TOKEN     – Docker Hub access token (not your password)
+Set these under Settings -> Secrets and variables -> Actions:
+  WPSCAN_API_TOKEN    
+  DOCKERHUB_USERNAME  
+  DOCKERHUB_TOKEN     
 
-## Known Misconfigurations in Vanilla Image (intentional for lab)
-1. XML-RPC enabled  → brute-force / DDoS amplification
-2. wp-login.php exposed with no rate limiting → credential stuffing
+## Known Misconfigurations in Vanilla Image 
+1. XML-RPC enabled  - brute-force / DDoS amplification
+2. wp-login.php exposed with no rate limiting -> credential stuffing
 3. Server version disclosed (Apache + PHP headers)
 4. Directory listing enabled on some paths
 5. wp-config.php writable by www-data

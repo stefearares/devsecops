@@ -176,7 +176,7 @@ jobs:
   # JOB 3 – Re-scan the hardened image (verify fixes)
   
   wpscan-hardened:
-    name: "Scan – Hardened WordPress"
+    name: "Scan  Hardened WordPress"
     runs-on: ubuntu-latest
     needs: build-hardened
     if: always() && needs.build-hardened.result == 'success'
