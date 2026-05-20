@@ -21,7 +21,7 @@ services:
       retries: 5
 
   wordpress:
-    image: wordpress:6.4-php8.2-apache
+    image: ${WP_IMAGE:-wordpress:6.4-php8.2-apache}
     container_name: wp-site
     restart: unless-stopped
     depends_on:
@@ -38,6 +38,12 @@ services:
       - wp_data:/var/www/html
     networks:
       - wp-network
+    healthcheck:
+      test: ["CMD-SHELL", "apache2ctl status >/dev/null 2>&1 || pidof apache2 >/dev/null"]
+      interval: 10s
+      timeout: 5s
+      retries: 12
+      start_period: 20s
 
 volumes:
   db_data:

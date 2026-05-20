@@ -18,6 +18,7 @@ env:
   REGISTRY_GHCR: ghcr.io
   REGISTRY_DOCKERHUB: docker.io
   IMAGE_NAME: ${{ github.repository_owner }}/wordpress-hardened
+  COMPOSE_FILE: docker/docker-compose.yml
 
 jobs:
   # JOB 1 – Scan the vanilla (un-patched) WordPress image
@@ -30,48 +31,25 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
-      - name: Start MySQL container
+      - name: Start stack via Docker Compose (vanilla image)
+        env:
+          WP_IMAGE: wordpress:6.4-php8.2-apache
         run: |
-          docker run -d --name wp-db \
-            -e MYSQL_ROOT_PASSWORD=rootpassword \
-            -e MYSQL_DATABASE=wordpress \
-            -e MYSQL_USER=wpuser \
-            -e MYSQL_PASSWORD=wppass \
-            --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" \
-            --health-interval=5s \
-            --health-timeout=3s \
-            --health-retries=10 \
-            mysql:8.0
+          docker compose -f "$COMPOSE_FILE" up -d --wait --wait-timeout 180
 
-      - name: Wait for MySQL to be healthy
+      - name: Wait for WordPress HTTP readiness
         run: |
-          echo "Waiting for MySQL..."
-          until [ "$(docker inspect -f '{{.State.Health.Status}}' wp-db)" = "healthy" ]; do
-            sleep 2
-          done
-          echo "MySQL is ready."
-
-      - name: Start WordPress (vanilla) container
-        run: |
-          docker run -d --name wp-site \
-            --link wp-db:mysql \
-            -e WORDPRESS_DB_HOST=mysql:3306 \
-            -e WORDPRESS_DB_USER=wpuser \
-            -e WORDPRESS_DB_PASSWORD=wppass \
-            -e WORDPRESS_DB_NAME=wordpress \
-            -p 8080:80 \
-            wordpress:6.4-php8.2-apache
-
-      - name: Wait for WordPress to be ready
-        run: |
-          echo "Waiting for WordPress to start..."
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
-              break
+              echo "WordPress responded with $STATUS"
+              exit 0
             fi
             sleep 5
           done
+          echo "WordPress did not become ready in time" >&2
+          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/compose-vanilla.log || true
+          exit 1
 
       - name: Complete WordPress installation
         run: |
@@ -88,13 +66,13 @@ jobs:
               --allow-root
           "
 
-      - name: Install WPScan
+      - name: Install WPScan and jq
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev
+          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev jq
           sudo gem install wpscan --no-document
 
-      - name: Run WPScan (vanilla)
+      - name: Run WPScan (vanilla) — JSON output
         env:
           WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
         run: |
@@ -104,20 +82,41 @@ jobs:
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
-            $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
-            --output scans/wpscan-vanilla.txt \
-            --format cli-no-colour \
+            ${WPSCAN_API_TOKEN:+--api-token "$WPSCAN_API_TOKEN"} \
+            --output scans/wpscan-vanilla.json \
+            --format json \
             || true   # don't fail the job on findings
 
-      - name: Upload vanilla scan artifact
+      - name: Summarize vanilla JSON findings
+        run: |
+          jq -r '
+            "WPScan summary — vanilla",
+            "WordPress version: \(.version.number // "unknown") (status: \(.version.status // "unknown"))",
+            "Core vulnerabilities: \((.version.vulnerabilities // []) | length)",
+            "Plugins detected: \((.plugins // {}) | length)",
+            "Plugin vulnerabilities: \([(.plugins // {})[] | (.vulnerabilities // [])[]] | length)",
+            "Themes detected: \((.themes // {}) | length)",
+            "Users enumerated: \((.users // {}) | length)",
+            "Interesting findings: \((.interesting_findings // []) | length)"
+          ' scans/wpscan-vanilla.json | tee scans/wpscan-vanilla-summary.txt
+
+      - name: Upload vanilla scan artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wpscan-vanilla
-          path: scans/wpscan-vanilla.txt
+          path: |
+            scans/wpscan-vanilla.json
+            scans/wpscan-vanilla-summary.txt
+            scans/compose-vanilla.log
+          if-no-files-found: warn
           retention-days: 30
 
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f "$COMPOSE_FILE" down -v --remove-orphans
+
   # JOB 2 – Build & push the hardened image
-  
   build-hardened:
     name: "Build Hardened Image"
     runs-on: ubuntu-latest
@@ -170,9 +169,7 @@ jobs:
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
-
   # JOB 3 – Re-scan the hardened image (verify fixes)
-  
   wpscan-hardened:
     name: "Scan Hardened WordPress"
     runs-on: ubuntu-latest
@@ -190,46 +187,26 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Start MySQL container
+      - name: Start stack via Docker Compose (hardened image)
+        env:
+          WP_IMAGE: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:hardened
         run: |
-          docker run -d --name wp-db \
-            -e MYSQL_ROOT_PASSWORD=rootpassword \
-            -e MYSQL_DATABASE=wordpress \
-            -e MYSQL_USER=wpuser \
-            -e MYSQL_PASSWORD=wppass \
-            --health-cmd="mysqladmin ping -h localhost -u root -prootpassword" \
-            --health-interval=5s \
-            --health-timeout=3s \
-            --health-retries=10 \
-            mysql:8.0
+          docker compose -f "$COMPOSE_FILE" up -d --wait --wait-timeout 180
 
-      - name: Wait for MySQL to be healthy
+      - name: Wait for WordPress HTTP readiness
         run: |
-          until [ "$(docker inspect -f '{{.State.Health.Status}}' wp-db)" = "healthy" ]; do
-            sleep 2
-          done
-
-      - name: Start WordPress (hardened) container
-        run: |
-          docker run -d --name wp-site \
-            --link wp-db:mysql \
-            -e WORDPRESS_DB_HOST=mysql:3306 \
-            -e WORDPRESS_DB_USER=wpuser \
-            -e WORDPRESS_DB_PASSWORD=wppass \
-            -e WORDPRESS_DB_NAME=wordpress \
-            -p 8080:80 \
-            ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:hardened
-
-      - name: Wait for WordPress to be ready
-        run: |
+          mkdir -p scans
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
-              echo "WordPress responded with $STATUS!"
-              break
+              echo "WordPress responded with $STATUS"
+              exit 0
             fi
             sleep 5
           done
+          echo "WordPress did not become ready in time" >&2
+          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/compose-hardened.log || true
+          exit 1
 
       - name: Complete WordPress installation
         run: |
@@ -244,13 +221,13 @@ jobs:
               --allow-root
           "
 
-      - name: Install WPScan
+      - name: Install WPScan and jq
         run: |
           sudo apt-get update -qq
-          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev
+          sudo apt-get install -y ruby-full build-essential libcurl4-openssl-dev zlib1g-dev jq
           sudo gem install wpscan --no-document
 
-      - name: Run WPScan (hardened)
+      - name: Run WPScan (hardened) — JSON output
         env:
           WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
         run: |
@@ -260,29 +237,77 @@ jobs:
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
-            $( [ -n "$WPSCAN_API_TOKEN" ] && echo "--api-token $WPSCAN_API_TOKEN" || true ) \
-            --output scans/wpscan-hardened.txt \
-            --format cli-no-colour \
+            ${WPSCAN_API_TOKEN:+--api-token "$WPSCAN_API_TOKEN"} \
+            --output scans/wpscan-hardened.json \
+            --format json \
             || true
 
-      - name: Upload hardened scan artifact
+      - name: Summarize hardened JSON findings
+        run: |
+          jq -r '
+            "WPScan summary — hardened",
+            "WordPress version: \(.version.number // "unknown") (status: \(.version.status // "unknown"))",
+            "Core vulnerabilities: \((.version.vulnerabilities // []) | length)",
+            "Plugins detected: \((.plugins // {}) | length)",
+            "Plugin vulnerabilities: \([(.plugins // {})[] | (.vulnerabilities // [])[]] | length)",
+            "Themes detected: \((.themes // {}) | length)",
+            "Users enumerated: \((.users // {}) | length)",
+            "Interesting findings: \((.interesting_findings // []) | length)"
+          ' scans/wpscan-hardened.json | tee scans/wpscan-hardened-summary.txt
+
+      - name: Fetch vanilla JSON and build comparison
+        uses: actions/download-artifact@v4
+        with:
+          name: wpscan-vanilla
+          path: scans/_vanilla
+        continue-on-error: true
+
+      - name: Compare vanilla vs hardened
+        run: |
+          VANILLA=$(find scans/_vanilla -name 'wpscan-vanilla.json' -type f 2>/dev/null | head -n 1)
+          HARDENED=scans/wpscan-hardened.json
+          if [ -z "$VANILLA" ] || [ ! -f "$VANILLA" ]; then
+            echo "Vanilla JSON not available — skipping diff" | tee scans/comparison.txt
+            exit 0
+          fi
+          jq -n \
+            --slurpfile v "$VANILLA" \
+            --slurpfile h "$HARDENED" '
+              def count_findings(s):
+                {
+                  core_vulns:    ((s[0].version.vulnerabilities // []) | length),
+                  plugin_vulns:  ([(s[0].plugins // {})[] | (.vulnerabilities // [])[]] | length),
+                  users:         ((s[0].users // {}) | length),
+                  findings:      ((s[0].interesting_findings // []) | length)
+                };
+              {
+                vanilla:  count_findings($v),
+                hardened: count_findings($h)
+              }' | tee scans/comparison.json
+          {
+            echo "WPScan comparison (vanilla → hardened)"
+            jq -r '
+              "core_vulns:    \(.vanilla.core_vulns) → \(.hardened.core_vulns)",
+              "plugin_vulns:  \(.vanilla.plugin_vulns) → \(.hardened.plugin_vulns)",
+              "users:         \(.vanilla.users) → \(.hardened.users)",
+              "findings:      \(.vanilla.findings) → \(.hardened.findings)"
+            ' scans/comparison.json
+          } | tee scans/comparison.txt
+
+      - name: Upload hardened scan artifacts
+        if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wpscan-hardened
-          path: scans/wpscan-hardened.txt
+          path: |
+            scans/wpscan-hardened.json
+            scans/wpscan-hardened-summary.txt
+            scans/comparison.json
+            scans/comparison.txt
+            scans/compose-hardened.log
+          if-no-files-found: warn
           retention-days: 30
 
-      - name: Compare scan results
-        run: |
-          echo "HARDENED SCAN SUMMARY" | tee scans/comparison.txt
-          echo "" >> scans/comparison.txt
-          grep -E "(Vulnerability|vulnerability|CVE|MEDIUM|HIGH|CRITICAL|\[!\]|\[\+\])" \
-            scans/wpscan-hardened.txt >> scans/comparison.txt || echo "No critical findings" >> scans/comparison.txt
-          cat scans/comparison.txt
-
-      - name: Upload comparison artifact
-        uses: actions/upload-artifact@v4
-        with:
-          name: scan-comparison
-          path: scans/comparison.txt
-          retention-days: 30
+      - name: Tear down stack
+        if: always()
+        run: docker compose -f "$COMPOSE_FILE" down -v --remove-orphans

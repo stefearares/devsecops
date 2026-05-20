@@ -1,49 +1,27 @@
-# Automated Vulnerability Discovery & Remediation Pipeline
+# Automated Vulnerability Discovery and Remediation Pipeline
 
-**WordPress + WPScan + GitHub Actions**
-
-**Author:** Rares Stefea  
-**Date:** May 12, 2026  
-**Course:** DevSecOps Lab 2026
-
----
+**Rares-Bogdan Stefea, May 12, 2026**
 
 ## 1. Environment Setup
 
-### Steps Taken
+1. For a the local WordPress deployment i have created a `docker-compose.yml` defining:
+   - **MySQL 8.0** DB container with health
+   - **WordPress 6.4** container exposed on **port 8080**
 
-1. **Local WordPress deployment** — Created a `docker-compose.yml` defining two services:
-   - **MySQL 8.0** database container with health checks
-   - **WordPress 6.4 (PHP 8.2 + Apache)** container linked to the database, exposed on port 8080
-
-2. **GitHub repository** — Initialized a Git repository with a structured layout:
-   ```
-   docker/          – docker-compose.yml, Dockerfile.hardened, hardening configs
-   .github/workflows/ – scan.yml (CI/CD pipeline)
-   scans/           – WPScan output artifacts
-   src/             – Working notes
-   ```
-
-3. **GitHub Actions pipeline** — Built a 3-job workflow:
+2. For the GitHub Actions pipeline I have built the following workflow:
    - Job 1: Spin up vanilla WordPress and run WPScan
    - Job 2: Build and push the hardened Docker image
    - Job 3: Re-scan the hardened image to verify fixes
 
-4. **Secrets configuration** — Added three GitHub repository secrets:
-   - `WPSCAN_API_TOKEN` — for WPScan vulnerability database access
-   - `DOCKERHUB_USERNAME` — Docker Hub credentials
-   - `DOCKERHUB_TOKEN` — Docker Hub access token
-
-### Challenges Encountered
+### Setup Challenges
 
 | Challenge | Solution |
 |-----------|----------|
-| `a2enmod`/`a2dismod` not found during Docker build (exit code 127) | These are Perl scripts; `apt-get remove perl` was removing them. Kept perl installed and used full paths. |
-| `apt-get autoremove` removing Apache utilities | Removed the `autoremove` step to avoid unintended dependency removal. |
-| GHCR push denied ("installation not allowed to Create organization package") | Fixed by updating repository workflow permissions to "Read and write" under Settings → Actions → General. |
-| WPScan aborting with "database file is missing" | Removed the `--no-update` flag so WPScan downloads its vulnerability database before scanning. |
-| WPScan reporting "Website is in install mode" | Added a `wp core install` step via WP-CLI to auto-complete WordPress setup before scanning. |
-| Node.js 20 deprecation warnings in GitHub Actions | Non-blocking warnings; actions still function correctly until June 2026 deadline. |
+| `a2enmod`/`a2dismod` not found during Docker build | These are Perl scripts and `apt-get remove perl` was removing them. Kept perl installed and used the full paths. |
+| `apt-get autoremove` was removing Apache utilities | Removed the `autoremove` step to avoid unintended dependency removal. |
+| WPScan aborted: "database file is missing" | Removed the `--no-update` flag so WPScan downloads its vulnerability before scanning. |
+| WPScan reporting: "Website is in install mode" | Added `wp core install` step via WP-CLI to create the WordPress setup before scanning. |
+| Node.js 20 deprecation warnings in GitHub Actions | Not a major warning the solution is a simple update to node. |
 
 ---
 
@@ -51,26 +29,26 @@
 
 ### Vanilla WordPress Scan Results
 
-WPScan identified the following issues on the un-hardened WordPress 6.4.3 instance:
+WPScan identified the following issues on the basic WordPress 6.4 instance:
 
-#### WordPress Core Vulnerabilities (6 found)
+#### WordPress Core Vulnerabilities
 
 | # | Vulnerability | Severity | CVE | Fixed In |
 |---|--------------|----------|-----|----------|
-| 1 | Unauthenticated Stored XSS | **High** | — | 6.4.4 |
+| 1 | Unauthenticated Stored XSS | High | — | 6.4.4 |
 | 2 | Contributor+ Stored XSS in HTML API | Medium | — | 6.4.5 |
 | 3 | Contributor+ Stored XSS in Template-Part Block | Medium | — | 6.4.5 |
 | 4 | Contributor+ Path Traversal in Template-Part Block | Medium | — | 6.4.5 |
 | 5 | Author+ DOM Stored XSS | Medium | CVE-2025-58674 | 6.4.7 |
 | 6 | Contributor+ Sensitive Data Disclosure | Medium | CVE-2025-58246 | 6.4.7 |
 
-#### Plugin Vulnerabilities (1 found)
+#### Plugin Vulnerabilities
 
 | Plugin | Vulnerability | CVE | Fixed In |
 |--------|--------------|-----|----------|
 | Akismet | Unauthenticated Stored XSS | CVE-2015-9357 | 3.1.5 |
 
-#### Server / Configuration Issues
+#### Server Issues
 
 | Issue | Risk |
 |-------|------|
@@ -107,9 +85,9 @@ The most critical finding is the **Unauthenticated Stored XSS** vulnerability (f
 
 Applied in `docker/Dockerfile.hardened`:
 
-- **OS-level patches:** `apt-get update && apt-get upgrade -y` — applies all available Debian security patches to the base image
-- **Removed unnecessary packages:** `imagemagick` removed (large attack surface with known CVEs, not needed for basic WordPress operation)
-- **WP-CLI installed:** Enables automated WordPress core, plugin, and theme updates at build time
+- **OS updates:** `apt-get update && apt-get upgrade -y` upgrades debian version to fix security patches to the base image.
+- **Removed unnecessary packages:** `imagemagick` removed
+- **WP-CLI installed:** Enables automated WordPress core, plugin, and theme updates
 
 ### 3.2 Hardening Measures
 
@@ -123,7 +101,7 @@ Applied in `docker/Dockerfile.hardened`:
 #### Apache Hardening (`hardening/apache-security.conf`)
 - `ServerTokens Prod` — hides Apache version from `Server` header
 - `ServerSignature Off` — removes server info from error pages
-- `TraceEnable Off` — disables HTTP TRACE method (prevents XST attacks)
+- `TraceEnable Off` — disables HTTP TRACE method 
 - `X-Frame-Options: SAMEORIGIN` — prevents clickjacking
 - `X-XSS-Protection: 1; mode=block` — enables browser XSS filter
 - `X-Content-Type-Options: nosniff` — prevents MIME-type sniffing
@@ -134,35 +112,29 @@ Applied in `docker/Dockerfile.hardened`:
 - `readme.html`, `license.txt`, `.htaccess` blocked
 
 #### WordPress Hardening (`hardening/wp-config-extra.php`)
-- `DISALLOW_FILE_EDIT = true` — disables the theme/plugin code editor in WP admin
-- `DISALLOW_FILE_MODS = true` — blocks plugin/theme installation from admin panel
-- `WP_DEBUG = false`, `WP_DEBUG_DISPLAY = false` — prevents debug information leakage
-- `AUTH_COOKIE_EXPIRATION = 28800` — limits session lifetime to 8 hours
+- `DISALLOW_FILE_EDIT = true` — disables the theme code editor in WP admin
+- `DISALLOW_FILE_MODS = true` — blocks plugin installation from admin panel
+- `WP_DEBUG = false`, `WP_DEBUG_DISPLAY = false` — prevents debug information to leak
+- `AUTH_COOKIE_EXPIRATION = 28800` — limits session lifetime to aprx 8 hours
 
 #### Container Hardening (`Dockerfile.hardened`)
-- Stripped `setuid`/`setgid` bits from all binaries — reduces privilege escalation vectors
-- File permissions locked: `644` for files, `755` for directories
-- Ownership set to `www-data:www-data`
+- Stripped `setuid`/`setgid` from all executables which reduces privilege escalation vectors
+- File permissions have changed to `644` for files, `755` for directories
+- Ownership was set to `www-data:www-data`
 
 ### 3.3 Before/After Scan Evidence
 
 | Finding | Vanilla Scan | Hardened Scan |
 |---------|-------------|---------------|
-| Server header | `Apache/2.4.57 (Debian)` | `Apache` (version hidden) |
-| PHP version header | `PHP/8.2.17` exposed | **Removed** |
-| XML-RPC | Enabled and accessible | **Blocked** (not detected) |
-| `readme.html` | Accessible | **Blocked** (not detected) |
-| Security headers | None present | CSP, Referrer-Policy, X-Frame-Options, etc. **added** |
-| WP core vulns (6.4.3) | 6 vulnerabilities | 6 vulnerabilities (same base image*) |
-| Akismet XSS | Detected | Detected (same bundled plugin*) |
+| Server | `Apache/2.4.57 (Debian)` | `Apache` |
+| PHP version | `PHP/8.2.17` exposed | **Removed** |
+| XML-RPC | Enabled and accessible | **Blocked**  |
+| `readme.html` | Accessible | **Blocked** |
+| WP core vulns | 6 vulnerabilities | 6 vulnerabilities |
+| Akismet XSS | Detected | Detected |
 
-*\*Note: The WordPress core and plugin vulnerabilities persist because both images use the `wordpress:6.4` base. Full remediation would require upgrading to `wordpress:6.8.3+` or using WP-CLI to run `wp core update` and `wp plugin update --all` at build time. The hardening measures applied mitigate the exploitability of these vulnerabilities by:*
-- *Blocking the theme/plugin editor (prevents post-exploitation code injection)*
-- *Disabling dangerous PHP functions (prevents RCE even if admin access is gained)*
-- *Blocking XML-RPC (prevents brute-force amplification)*
-- *Adding security headers (mitigates XSS impact)*
+The WordPress core and plugin vulnerabilities remain because both images use the `wordpress:6.4` as a base. The fix is to switch to `wordpress:6.8.3+`. 
 
----
 
 ## 4. Fixed Image Build
 
@@ -181,7 +153,7 @@ Key files:
 
 **URL:** https://hub.docker.com/r/stefearares/wordpress-hardened
 
-Pull the hardened image:
+You can pull the hardened image at:
 ```bash
 docker pull stefearares/wordpress-hardened:hardened
 ```
