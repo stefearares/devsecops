@@ -1,0 +1,14 @@
+{
+  "vanilla": {
+    "core_vulns": 6,
+    "plugin_vulns": 1,
+    "users": 1,
+    "findings": 4
+  },
+  "hardened": {
+    "core_vulns": 6,
+    "plugin_vulns": 1,
+    "users": 1,
+    "findings": 2
+  }
+}

@@ -48,7 +48,8 @@ jobs:
             sleep 5
           done
           echo "WordPress did not become ready in time" >&2
-          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/compose-vanilla.log || true
+          mkdir -p scans/vanilla
+          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/vanilla/compose.log || true
           exit 1
 
       - name: Complete WordPress installation
@@ -76,14 +77,14 @@ jobs:
         env:
           WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
         run: |
-          mkdir -p scans
+          mkdir -p scans/vanilla
           wpscan \
             --url http://localhost:8080 \
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
             ${WPSCAN_API_TOKEN:+--api-token "$WPSCAN_API_TOKEN"} \
-            --output scans/wpscan-vanilla.json \
+            --output scans/vanilla/wpscan-vanilla.json \
             --format json \
             || true   # don't fail the job on findings
 
@@ -98,17 +99,14 @@ jobs:
             "Themes detected: \((.themes // {}) | length)",
             "Users enumerated: \((.users // {}) | length)",
             "Interesting findings: \((.interesting_findings // []) | length)"
-          ' scans/wpscan-vanilla.json | tee scans/wpscan-vanilla-summary.txt
+          ' scans/vanilla/wpscan-vanilla.json | tee scans/vanilla/wpscan-vanilla-summary.txt
 
       - name: Upload vanilla scan artifacts
         if: always()
         uses: actions/upload-artifact@v4
         with:
           name: wpscan-vanilla
-          path: |
-            scans/wpscan-vanilla.json
-            scans/wpscan-vanilla-summary.txt
-            scans/compose-vanilla.log
+          path: scans/vanilla/
           if-no-files-found: warn
           retention-days: 30
 
@@ -190,12 +188,13 @@ jobs:
       - name: Start stack via Docker Compose (hardened image)
         env:
           WP_IMAGE: ${{ env.REGISTRY_GHCR }}/${{ env.IMAGE_NAME }}:hardened
+          WP_INTERNAL_PORT: "8080"
         run: |
           docker compose -f "$COMPOSE_FILE" up -d --wait --wait-timeout 180
 
       - name: Wait for WordPress HTTP readiness
         run: |
-          mkdir -p scans
+          mkdir -p scans/hardened
           for i in $(seq 1 30); do
             STATUS=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:8080/ || true)
             if [ "$STATUS" = "200" ] || [ "$STATUS" = "302" ] || [ "$STATUS" = "301" ]; then
@@ -205,7 +204,7 @@ jobs:
             sleep 5
           done
           echo "WordPress did not become ready in time" >&2
-          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/compose-hardened.log || true
+          docker compose -f "$COMPOSE_FILE" logs --no-color > scans/hardened/compose.log || true
           exit 1
 
       - name: Complete WordPress installation
@@ -231,14 +230,14 @@ jobs:
         env:
           WPSCAN_API_TOKEN: ${{ secrets.WPSCAN_API_TOKEN }}
         run: |
-          mkdir -p scans
+          mkdir -p scans/hardened
           wpscan \
             --url http://localhost:8080 \
             --enumerate u,vp,vt,tt,cb,dbe \
             --plugins-detection aggressive \
             --force \
             ${WPSCAN_API_TOKEN:+--api-token "$WPSCAN_API_TOKEN"} \
-            --output scans/wpscan-hardened.json \
+            --output scans/hardened/wpscan-hardened.json \
             --format json \
             || true
 
@@ -253,7 +252,7 @@ jobs:
             "Themes detected: \((.themes // {}) | length)",
             "Users enumerated: \((.users // {}) | length)",
             "Interesting findings: \((.interesting_findings // []) | length)"
-          ' scans/wpscan-hardened.json | tee scans/wpscan-hardened-summary.txt
+          ' scans/hardened/wpscan-hardened.json | tee scans/hardened/wpscan-hardened-summary.txt
 
       - name: Fetch vanilla JSON and build comparison
         uses: actions/download-artifact@v4
@@ -264,10 +263,11 @@ jobs:
 
       - name: Compare vanilla vs hardened
         run: |
+          mkdir -p scans/comparison
           VANILLA=$(find scans/_vanilla -name 'wpscan-vanilla.json' -type f 2>/dev/null | head -n 1)
-          HARDENED=scans/wpscan-hardened.json
+          HARDENED=scans/hardened/wpscan-hardened.json
           if [ -z "$VANILLA" ] || [ ! -f "$VANILLA" ]; then
-            echo "Vanilla JSON not available — skipping diff" | tee scans/comparison.txt
+            echo "Vanilla JSON not available — skipping diff" | tee scans/comparison/comparison.txt
             exit 0
           fi
           jq -n \
@@ -283,7 +283,7 @@ jobs:
               {
                 vanilla:  count_findings($v),
                 hardened: count_findings($h)
-              }' | tee scans/comparison.json
+              }' | tee scans/comparison/comparison.json
           {
             echo "WPScan comparison (vanilla → hardened)"
             jq -r '
@@ -291,8 +291,8 @@ jobs:
               "plugin_vulns:  \(.vanilla.plugin_vulns) → \(.hardened.plugin_vulns)",
               "users:         \(.vanilla.users) → \(.hardened.users)",
               "findings:      \(.vanilla.findings) → \(.hardened.findings)"
-            ' scans/comparison.json
-          } | tee scans/comparison.txt
+            ' scans/comparison/comparison.json
+          } | tee scans/comparison/comparison.txt
 
       - name: Upload hardened scan artifacts
         if: always()
@@ -300,11 +300,8 @@ jobs:
         with:
           name: wpscan-hardened
           path: |
-            scans/wpscan-hardened.json
-            scans/wpscan-hardened-summary.txt
-            scans/comparison.json
-            scans/comparison.txt
-            scans/compose-hardened.log
+            scans/hardened/
+            scans/comparison/
           if-no-files-found: warn
           retention-days: 30
 

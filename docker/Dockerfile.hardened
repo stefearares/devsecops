@@ -1,7 +1,7 @@
-FROM wordpress:6.4-php8.2-apache AS base
+FROM wordpress:6.8.3-php8.2-apache AS base
 
 LABEL maintainer="rares"
-LABEL description="Hardened WordPress"
+LABEL description="Hardened WordPress — non-root, patched core, locked-down config"
 
 RUN apt-get update && \
     apt-get upgrade -y && \
@@ -17,19 +17,35 @@ RUN curl -sS -o /usr/local/bin/wp https://raw.githubusercontent.com/wp-cli/build
     chmod +x /usr/local/bin/wp
 
 COPY hardening/php-hardening.ini /usr/local/etc/php/conf.d/99-hardening.ini
-
 COPY hardening/apache-security.conf /etc/apache2/conf-enabled/security.conf
 RUN a2dismod status 2>/dev/null || true && \
     a2enmod headers rewrite
 COPY hardening/wp-config-extra.php /tmp/wp-config-extra.php
+
+RUN sed -ri 's!^Listen 80$!Listen 8080!' /etc/apache2/ports.conf && \
+    sed -ri 's!<VirtualHost \*:80>!<VirtualHost *:8080>!' /etc/apache2/sites-enabled/000-default.conf
+
 RUN find / -xdev -perm /6000 -type f 2>/dev/null | xargs chmod a-s 2>/dev/null || true
 
-RUN chown -R www-data:www-data /var/www/html && \
+RUN cp -a /usr/src/wordpress/. /var/www/html/ && \
     find /var/www/html -type d -exec chmod 755 {} \; && \
     find /var/www/html -type f -exec chmod 644 {} \;
 
+RUN mkdir -p /var/log/apache2 /var/run/apache2 /var/lock/apache2 && \
+    chown -R www-data:www-data \
+        /var/www/html \
+        /var/log/apache2 \
+        /var/run/apache2 \
+        /var/lock/apache2 \
+        /usr/local/etc/php/conf.d \
+        /etc/apache2
+
 COPY hardening/docker-entrypoint-hardened.sh /usr/local/bin/docker-entrypoint-hardened.sh
 RUN chmod +x /usr/local/bin/docker-entrypoint-hardened.sh
+
+EXPOSE 8080
+
+USER www-data
 
 ENTRYPOINT ["docker-entrypoint-hardened.sh"]
 CMD ["apache2-foreground"]

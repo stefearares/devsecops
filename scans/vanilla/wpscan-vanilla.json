@@ -1,0 +1,351 @@
+{
+  "banner": {
+    "description": "WordPress Security Scanner by the WPScan Team",
+    "version": "3.8.28",
+    "authors": [
+      "@_WPScan_",
+      "@ethicalhack3r",
+      "@erwan_lr",
+      "@firefart"
+    ],
+    "sponsor": ""
+  },
+  "db_update_started": true,
+  "db_files_updated": [
+    "metadata.json",
+    "wp_fingerprints.json",
+    "timthumbs-v3.txt",
+    "config_backups.txt",
+    "db_exports.txt",
+    "dynamic_finders.yml",
+    "LICENSE",
+    "sponsor.txt"
+  ],
+  "db_update_finished": true,
+  "start_time": 1779294745,
+  "start_memory": 69410816,
+  "target_url": "http://localhost:8080/",
+  "target_ip": "::1",
+  "effective_url": "http://localhost:8080/",
+  "interesting_findings": [
+    {
+      "url": "http://localhost:8080/",
+      "to_s": "Headers",
+      "type": "headers",
+      "found_by": "Headers (Passive Detection)",
+      "confidence": 100,
+      "confirmed_by": {
+
+      },
+      "references": {
+
+      },
+      "interesting_entries": [
+        "Server: Apache/2.4.57 (Debian)",
+        "X-Powered-By: PHP/8.2.17"
+      ]
+    },
+    {
+      "url": "http://localhost:8080/xmlrpc.php",
+      "to_s": "XML-RPC seems to be enabled: http://localhost:8080/xmlrpc.php",
+      "type": "xmlrpc",
+      "found_by": "Direct Access (Aggressive Detection)",
+      "confidence": 100,
+      "confirmed_by": {
+
+      },
+      "references": {
+        "url": [
+          "http://codex.wordpress.org/XML-RPC_Pingback_API"
+        ],
+        "metasploit": [
+          "auxiliary/scanner/http/wordpress_ghost_scanner",
+          "auxiliary/dos/http/wordpress_xmlrpc_dos",
+          "auxiliary/scanner/http/wordpress_xmlrpc_login",
+          "auxiliary/scanner/http/wordpress_pingback_access"
+        ]
+      },
+      "interesting_entries": [
+
+      ]
+    },
+    {
+      "url": "http://localhost:8080/readme.html",
+      "to_s": "WordPress readme found: http://localhost:8080/readme.html",
+      "type": "readme",
+      "found_by": "Direct Access (Aggressive Detection)",
+      "confidence": 100,
+      "confirmed_by": {
+
+      },
+      "references": {
+
+      },
+      "interesting_entries": [
+
+      ]
+    },
+    {
+      "url": "http://localhost:8080/wp-cron.php",
+      "to_s": "The external WP-Cron seems to be enabled: http://localhost:8080/wp-cron.php",
+      "type": "wp_cron",
+      "found_by": "Direct Access (Aggressive Detection)",
+      "confidence": 60,
+      "confirmed_by": {
+
+      },
+      "references": {
+        "url": [
+          "https://www.iplocation.net/defend-wordpress-from-ddos",
+          "https://github.com/wpscanteam/wpscan/issues/1299"
+        ]
+      },
+      "interesting_entries": [
+
+      ]
+    }
+  ],
+  "version": {
+    "number": "6.4.3",
+    "release_date": "2024-01-30",
+    "status": "insecure",
+    "found_by": "Rss Generator (Passive Detection)",
+    "confidence": 100,
+    "interesting_entries": [
+      "http://localhost:8080/?feed=rss2, <generator>https://wordpress.org/?v=6.4.3</generator>",
+      "http://localhost:8080/?feed=comments-rss2, <generator>https://wordpress.org/?v=6.4.3</generator>"
+    ],
+    "confirmed_by": {
+
+    },
+    "vulnerabilities": [
+      {
+        "title": "WP < 6.5.2 - Unauthenticated Stored XSS",
+        "fixed_in": "6.4.4",
+        "references": {
+          "url": [
+            "https://wordpress.org/news/2024/04/wordpress-6-5-2-maintenance-and-security-release/"
+          ],
+          "wpvulndb": [
+            "1a5c5df1-57ee-4190-a336-b0266962078f"
+          ]
+        }
+      },
+      {
+        "title": "WordPress < 6.5.5 - Contributor+ Stored XSS in HTML API",
+        "fixed_in": "6.4.5",
+        "references": {
+          "url": [
+            "https://wordpress.org/news/2024/06/wordpress-6-5-5/"
+          ],
+          "wpvulndb": [
+            "2c63f136-4c1f-4093-9a8c-5e51f19eae28"
+          ]
+        }
+      },
+      {
+        "title": "WordPress < 6.5.5 - Contributor+ Stored XSS in Template-Part Block",
+        "fixed_in": "6.4.5",
+        "references": {
+          "url": [
+            "https://wordpress.org/news/2024/06/wordpress-6-5-5/"
+          ],
+          "wpvulndb": [
+            "7c448f6d-4531-4757-bff0-be9e3220bbbb"
+          ]
+        }
+      },
+      {
+        "title": "WordPress < 6.5.5 - Contributor+ Path Traversal in Template-Part Block",
+        "fixed_in": "6.4.5",
+        "references": {
+          "url": [
+            "https://wordpress.org/news/2024/06/wordpress-6-5-5/"
+          ],
+          "wpvulndb": [
+            "36232787-754a-4234-83d6-6ded5e80251c"
+          ]
+        }
+      },
+      {
+        "title": "WP < 6.8.3 - Author+ DOM Stored XSS",
+        "fixed_in": "6.4.7",
+        "references": {
+          "cve": [
+            "2025-58674"
+          ],
+          "url": [
+            "https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-cross-site-scripting-xss-vulnerability",
+            " https://wordpress.org/news/2025/09/wordpress-6-8-3-release/"
+          ],
+          "wpvulndb": [
+            "c4616b57-770f-4c40-93f8-29571c80330a"
+          ]
+        }
+      },
+      {
+        "title": "WP < 6.8.3 - Contributor+ Sensitive Data Disclosure",
+        "fixed_in": "6.4.7",
+        "references": {
+          "cve": [
+            "2025-58246"
+          ],
+          "url": [
+            "https://patchstack.com/database/wordpress/wordpress/wordpress/vulnerability/wordpress-wordpress-wordpress-6-8-2-sensitive-data-exposure-vulnerability",
+            "https://wordpress.org/news/2025/09/wordpress-6-8-3-release/"
+          ],
+          "wpvulndb": [
+            "1e2dad30-dd95-4142-903b-4d5c580eaad2"
+          ]
+        }
+      }
+    ]
+  },
+  "main_theme": {
+    "slug": "twentytwentyfour",
+    "location": "http://localhost:8080/wp-content/themes/twentytwentyfour/",
+    "latest_version": "1.4",
+    "last_updated": "2025-12-03T00:00:00.000Z",
+    "outdated": true,
+    "readme_url": "http://localhost:8080/wp-content/themes/twentytwentyfour/readme.txt",
+    "directory_listing": false,
+    "error_log_url": null,
+    "style_url": "http://localhost:8080/wp-content/themes/twentytwentyfour/style.css",
+    "style_name": "Twenty Twenty-Four",
+    "style_uri": "https://wordpress.org/themes/twentytwentyfour/",
+    "description": "Twenty Twenty-Four is designed to be flexible, versatile and applicable to any website. Its collection of templates and patterns tailor to different needs, such as presenting a business, blogging and writing or showcasing work. A multitude of possibilities open up with just a few adjustments to color and typography. Twenty Twenty-Four comes with style variations and full page designs to help speed up the site building process, is fully compatible with the site editor, and takes advantage of new design tools introduced in WordPress 6.4.",
+    "author": "the WordPress team",
+    "author_uri": "https://wordpress.org",
+    "template": null,
+    "license": "GNU General Public License v2 or later",
+    "license_uri": "http://www.gnu.org/licenses/gpl-2.0.html",
+    "tags": "one-column, custom-colors, custom-menu, custom-logo, editor-style, featured-images, full-site-editing, block-patterns, rtl-language-support, sticky-post, threaded-comments, translation-ready, wide-blocks, block-styles, style-variations, accessibility-ready, blog, portfolio, news",
+    "text_domain": "twentytwentyfour",
+    "found_by": "Urls In Homepage (Passive Detection)",
+    "confidence": 16,
+    "interesting_entries": [
+
+    ],
+    "confirmed_by": {
+      "Urls In 404 Page (Passive Detection)": {
+        "confidence": 8,
+        "interesting_entries": [
+
+        ]
+      }
+    },
+    "vulnerabilities": [
+
+    ],
+    "version": {
+      "number": "1.0",
+      "confidence": 80,
+      "found_by": "Style (Passive Detection)",
+      "interesting_entries": [
+        "http://localhost:8080/wp-content/themes/twentytwentyfour/style.css, Match: 'Version: 1.0'"
+      ],
+      "confirmed_by": {
+
+      }
+    },
+    "parents": [
+
+    ]
+  },
+  "plugins": {
+    "akismet": {
+      "slug": "akismet",
+      "location": "http://localhost:8080/wp-content/plugins/akismet/",
+      "latest_version": "5.7",
+      "last_updated": "2026-04-23T22:34:00.000Z",
+      "outdated": false,
+      "readme_url": false,
+      "directory_listing": false,
+      "error_log_url": null,
+      "found_by": "Known Locations (Aggressive Detection)",
+      "confidence": 80,
+      "interesting_entries": [
+        "http://localhost:8080/wp-content/plugins/akismet/, status: 403"
+      ],
+      "confirmed_by": {
+
+      },
+      "vulnerabilities": [
+        {
+          "title": "Akismet 2.5.0-3.1.4 - Unauthenticated Stored Cross-Site Scripting (XSS)",
+          "fixed_in": "3.1.5",
+          "references": {
+            "cve": [
+              "2015-9357"
+            ],
+            "url": [
+              "http://blog.akismet.com/2015/10/13/akismet-3-1-5-wordpress/",
+              "https://blog.sucuri.net/2015/10/security-advisory-stored-xss-in-akismet-wordpress-plugin.html"
+            ],
+            "wpvulndb": [
+              "1a2f3094-5970-4251-9ed0-ec595a0cd26c"
+            ]
+          }
+        }
+      ],
+      "version": null
+    }
+  },
+  "themes": {
+
+  },
+  "timthumbs": {
+
+  },
+  "config_backups": {
+
+  },
+  "db_exports": {
+
+  },
+  "users": {
+    "admin": {
+      "id": null,
+      "found_by": "Author Posts - Display Name (Passive Detection)",
+      "confidence": 100,
+      "interesting_entries": [
+
+      ],
+      "confirmed_by": {
+        "Rss Generator (Passive Detection)": {
+          "confidence": 50,
+          "interesting_entries": [
+
+          ]
+        },
+        "Author Id Brute Forcing - Author Pattern (Aggressive Detection)": {
+          "confidence": 100,
+          "interesting_entries": [
+
+          ]
+        },
+        "Login Error Messages (Aggressive Detection)": {
+          "confidence": 100,
+          "interesting_entries": [
+
+          ]
+        }
+      }
+    }
+  },
+  "vuln_api": {
+    "plan": "free",
+    "requests_done_during_scan": 3,
+    "requests_remaining": 22
+  },
+  "stop_time": 1779295186,
+  "elapsed": 440,
+  "requests_done": 18853,
+  "cached_requests": 13,
+  "data_sent": 5342652,
+  "data_sent_humanised": "5.095 MB",
+  "data_received": 701063367,
+  "data_received_humanised": "668.586 MB",
+  "used_memory": 475316224,
+  "used_memory_humanised": "453.297 MB"
+}
