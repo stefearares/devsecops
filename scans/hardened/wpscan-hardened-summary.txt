@@ -1,8 +1,8 @@
 WPScan summary — hardened
-WordPress version: 6.4.3 (status: insecure)
-Core vulnerabilities: 6
+WordPress version: 6.8.3 (status: insecure)
+Core vulnerabilities: 0
 Plugins detected: 1
 Plugin vulnerabilities: 1
 Themes detected: 0
 Users enumerated: 1
-Interesting findings: 2
+Interesting findings: 3

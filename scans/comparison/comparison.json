@@ -6,9 +6,9 @@
     "findings": 4
   },
   "hardened": {
-    "core_vulns": 6,
+    "core_vulns": 0,
     "plugin_vulns": 1,
     "users": 1,
-    "findings": 2
+    "findings": 3
   }
 }

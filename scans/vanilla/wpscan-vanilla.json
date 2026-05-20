@@ -22,8 +22,8 @@
     "sponsor.txt"
   ],
   "db_update_finished": true,
-  "start_time": 1779294745,
-  "start_memory": 69410816,
+  "start_time": 1779298047,
+  "start_memory": 69476352,
   "target_url": "http://localhost:8080/",
   "target_ip": "::1",
   "effective_url": "http://localhost:8080/",
@@ -336,16 +336,16 @@
   "vuln_api": {
     "plan": "free",
     "requests_done_during_scan": 3,
-    "requests_remaining": 22
+    "requests_remaining": 16
   },
-  "stop_time": 1779295186,
-  "elapsed": 440,
+  "stop_time": 1779298491,
+  "elapsed": 444,
   "requests_done": 18853,
   "cached_requests": 13,
   "data_sent": 5342652,
   "data_sent_humanised": "5.095 MB",
-  "data_received": 701063367,
+  "data_received": 701063400,
   "data_received_humanised": "668.586 MB",
-  "used_memory": 475316224,
-  "used_memory_humanised": "453.297 MB"
+  "used_memory": 471449600,
+  "used_memory_humanised": "449.609 MB"
 }
